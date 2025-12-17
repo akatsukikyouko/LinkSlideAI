@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkSlideAI</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --glass-border: rgba(255, 255, 255, 0.8);
+            --glass-surface: rgba(255, 255, 255, 0.65);
+            --shadow-light: 0 10px 40px -10px rgba(0, 0, 0, 0.05);
+            --text-primary: #2d3748;
+            --text-secondary: #718096;
+            --accent-crystal: linear-gradient(135deg, #e2e8f0 0%, #ffffff 100%);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            overflow: hidden;
+            background-color: #f3f4f6;
+            color: var(--text-primary);
+        }
+
+        /* --- 动态流光背景 (浅色系) --- */
+        .ambient-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            background: 
+                radial-gradient(circle at 0% 0%, rgba(219, 234, 254, 0.8), transparent 40%),
+                radial-gradient(circle at 100% 0%, rgba(243, 232, 255, 0.8), transparent 40%),
+                radial-gradient(circle at 100% 100%, rgba(224, 242, 254, 0.8), transparent 40%),
+                radial-gradient(circle at 0% 100%, rgba(254, 226, 226, 0.5), transparent 40%);
+            background-size: 200% 200%;
+            animation: flow 20s ease infinite;
+        }
+
+        @keyframes flow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* --- 3D 水晶玻璃面板 --- */
+        .crystal-panel {
+            background: var(--glass-surface);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            box-shadow: 
+                inset 0 0 0 1px rgba(255, 255, 255, 0.5),
+                0 20px 40px rgba(0, 0, 0, 0.04),
+                0 1px 3px rgba(0, 0, 0, 0.02);
+            border-radius: 24px;
+        }
+
+        /* 顶部导航 */
+        .crystal-header {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(15px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        /* --- JS生成内容的强制样式覆盖 (Overwrite Dark Mode) --- */
+        
+        /* 强制覆盖 JS 生成的 .bg-card (AI 回复框) */
+        .bg-card {
+            background: #ffffff !important;
+            border: 1px solid rgba(226, 232, 240, 0.8) !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02) !important;
+            color: #333 !important;
+            border-radius: 16px 16px 16px 4px !important;
+        }
+        /* 强制覆盖 AI 卡片内的文字颜色 */
+        .bg-card * {
+            color: #4a5568 !important; 
+        }
+
+        /* 用户消息气泡 */
+        .bg-white.text-black {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
+            color: #1a202c !important;
+            border: 1px solid white !important;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05) !important;
+            border-radius: 16px 16px 4px 16px !important;
+        }
+
+        /* AI 正在输入的加载点颜色 */
+        .animate-bounce {
+            background-color: #94a3b8 !important;
+        }
+
+        /* 滚动条美化 (浅色) */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        /* --- 控件与交互 --- */
+
+        /* 模式切换按钮组 */
+        .mode-toggle-group {
+            background: rgba(0, 0, 0, 0.04);
+            border-radius: 12px;
+            padding: 4px;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .btn-active {
+            background: #ffffff !important;
+            color: #000 !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05), 0 1px 0 rgba(0,0,0,0.05) !important;
+            border: 1px solid rgba(0,0,0,0.02) !important;
+        }
+
+        /* 输入框 - 陶瓷质感 */
+        #topic-input {
+            background: #ffffff;
+            border: 1px solid rgba(0,0,0,0.08);
+            color: #1f2937;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+            transition: all 0.3s ease;
+        }
+        #topic-input:focus {
+            outline: none;
+            border-color: #cbd5e1;
+            box-shadow: 0 0 0 3px rgba(200, 210, 230, 0.3), inset 0 1px 2px rgba(0,0,0,0.02);
+        }
+        #topic-input::placeholder {
+            color: #94a3b8;
+        }
+
+        /* 下拉菜单 */
+        select {
+            background-color: #ffffff !important;
+            color: #374151 !important;
+            border: 1px solid #e2e8f0 !important;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
+        }
+
+        /* 发送按钮 */
+        .send-btn {
+            background: #1f2937; /* 深灰近黑 */
+            color: white;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .send-btn:hover {
+            background: #000;
+            transform: scale(1.05);
+        }
+
+        /* 预览区域背景 */
+        .preview-wrapper {
+            background: rgba(255, 255, 255, 0.4);
+            border: 1px solid rgba(255,255,255,0.6);
+        }
+
+        /* Logo */
+        .logo-text {
+            color: #1a202c;
+            text-shadow: 0 1px 0 rgba(255,255,255,0.5);
+        }
+
+        /* 动画 */
+        .animate-fade-in {
+            animation: fadeInUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 强制隐藏默认样式 */
+        .border-gray-800 { border-color: transparent !important; }
+        .border-gray-700 { border-color: transparent !important; }
+        .bg-dark { background-color: transparent !important; }
+    </style>
+</head>
+
+<body class="h-screen flex flex-col overflow-hidden text-sm">
+
+    <div class="ambient-bg"></div>
+
+    <header class="h-16 flex items-center px-8 justify-between crystal-header z-50 shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-white to-gray-200 shadow-md border border-white flex items-center justify-center">
+                <div class="w-3 h-3 bg-gray-800 rounded-sm transform rotate-45"></div>
+            </div>
+            <span class="font-bold text-xl tracking-tight logo-text">LinkSlide<span class="font-normal text-gray-500">AI</span></span>
+        </div>
+        <div class="flex items-center gap-2 text-xs text-gray-500 bg-white/50 px-3 py-1 rounded-full border border-white/60 shadow-sm backdrop-blur-sm">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            Ready
+        </div>
+    </header>
+
+    <div class="flex-1 flex p-4 md:p-6 gap-4 md:gap-6 overflow-hidden relative z-10">
+
+        <div class="w-1/3 min-w-[360px] flex flex-col crystal-panel overflow-hidden transition-all duration-500">
+            
+            <div id="process-stream" class="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-hide">
+                <div class="p-6 rounded-2xl bg-white/40 border border-white/60 text-center py-12 shadow-sm">
+                    <div class="w-12 h-12 mx-auto bg-white rounded-2xl shadow-md flex items-center justify-center mb-4 text-gray-400">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                    </div>
+                    <h3 class="font-semibold text-gray-800 text-base mb-1">开始创作</h3>
+                    <p class="text-xs text-gray-500 max-w-[80%] mx-auto leading-relaxed">输入主题，AI 将为您生成极简、通透的演示文稿。</p>
+                </div>
+            </div>
+
+            <div id="input-area" class="p-5 border-t border-gray-200/50 bg-white/30 backdrop-blur-md">
+                
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                    
+                    <div class="flex mode-toggle-group">
+                        <button id="standard-btn" class="px-4 py-1.5 rounded-[10px] text-xs font-medium text-gray-500 hover:text-gray-900 transition-all btn-active">
+                            标准模式
+                        </button>
+                        <button id="pro-btn" class="px-4 py-1.5 rounded-[10px] text-xs font-medium text-gray-500 hover:text-gray-900 transition-all">
+                            深度模式
+                        </button>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <div class="relative flex items-center group">
+                            <select id="style-select" class="pl-3 pr-8 py-1.5 text-xs rounded-lg border focus:outline-none appearance-none cursor-pointer hover:border-gray-400 transition-colors">
+                                {% for style in styles %}
+                                <option value="{{ style.prompt }}">{{ style.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <svg class="w-3 h-3 text-gray-500 absolute right-2.5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                        </div>
+
+                        <div class="relative w-7 h-7 flex items-center justify-center cursor-pointer group rounded-full border border-gray-200 bg-white hover:shadow-md transition-shadow">
+                            <input type="color" id="color-picker" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10" title="主色调">
+                            <div id="color-preview" class="w-4 h-4 rounded-full border border-gray-100" 
+                                style="background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);">
+                            </div>
+                            <span id="color-label" class="hidden"></span> </div>
+                    </div>
+                </div>
+
+                <div class="relative group">
+                    <input type="text" id="topic-input"
+                        class="w-full rounded-2xl py-3.5 pl-5 pr-12 text-sm"
+                        placeholder="输入主题...">
+                    
+                    <button onclick="startGeneration()" class="absolute right-2 top-2 send-btn p-1.5 rounded-xl transition active:scale-95">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div id="loading-bar" class="hidden p-6 border-t border-gray-100 bg-white/50 text-center flex flex-col items-center justify-center gap-3">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-800"></div>
+                <span class="text-gray-500 font-medium text-xs tracking-wide">正在制作...</span>
+            </div>
+        </div>
+
+        <div class="flex-1 flex flex-col crystal-panel preview-wrapper relative overflow-hidden">
+            
+            <div class="h-12 border-b border-white/50 flex items-center justify-between px-6 bg-white/20">
+                <span class="text-xs font-semibold text-gray-500 uppercase tracking-widest">Preview</span>
+                
+                <div id="action-buttons" class="hidden gap-3">
+                    <a id="download-zip" href="#" target="_blank" class="flex items-center gap-2 text-xs bg-gray-900 text-white px-4 py-1.5 rounded-lg hover:bg-black transition shadow-lg shadow-gray-200">
+                        下载 ZIP
+                    </a>
+                    <a id="open-full" href="#" target="_blank" class="flex items-center gap-2 text-xs border border-gray-300 bg-white text-gray-700 px-4 py-1.5 rounded-lg hover:bg-gray-50 transition">
+                        新窗口
+                    </a>
+                </div>
+            </div>
+
+            <div class="flex-1 p-8 flex items-center justify-center relative bg-white/10">
+                
+                <div id="placeholder" class="text-gray-400 flex flex-col items-center justify-center gap-4">
+                    <div class="w-32 h-20 rounded border border-dashed border-gray-300 flex items-center justify-center">
+                        <span class="text-xs">Slide 1</span>
+                    </div>
+                    <span class="text-xs font-medium tracking-wide">等待生成内容</span>
+                </div>
+
+                <iframe id="preview-frame" class="w-full h-full hidden rounded-lg shadow-xl border border-gray-200/50 bg-white"></iframe>
+
+                <div id="preview-loader" class="hidden absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-sm z-20">
+                    <div class="animate-pulse w-12 h-12 bg-gray-200 rounded-full"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 保持原有的 JavaScript 逻辑完全不变
+        let currentMessageContent = null;
+        let lastStatus = null;
+        let useProMode = false;
+        let selectedColor = null;
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const standardBtn = document.getElementById('standard-btn');
+            const proBtn = document.getElementById('pro-btn');
+
+            standardBtn.addEventListener('click', function () {
+                useProMode = false;
+                standardBtn.classList.add('btn-active');
+                proBtn.classList.remove('btn-active');
+            });
+
+            proBtn.addEventListener('click', function () {
+                useProMode = true;
+                proBtn.classList.add('btn-active');
+                standardBtn.classList.remove('btn-active');
+            });
+
+            const colorPicker = document.getElementById('color-picker');
+            const colorPreview = document.getElementById('color-preview');
+            const colorLabel = document.getElementById('color-label');
+
+            colorPicker.addEventListener('input', function (e) {
+                selectedColor = e.target.value;
+                colorPreview.style.background = selectedColor;
+                colorPreview.style.backgroundImage = 'none';
+                colorLabel.innerText = selectedColor;
+            });
+        });
+
+        async function startGeneration() {
+            const input = document.getElementById('topic-input');
+            const inputArea = document.getElementById('input-area');
+            const loadingBar = document.getElementById('loading-bar');
+
+            const topic = input.value.trim();
+            if (!topic) return;
+
+            const styleSelect = document.getElementById('style-select');
+            const stylePrompt = styleSelect.value;
+            const styleName = styleSelect.options[styleSelect.selectedIndex].text;
+
+            input.value = '';
+            inputArea.classList.add('hidden');
+            loadingBar.classList.remove('hidden');
+            loadingBar.classList.add('flex');
+
+            document.getElementById('process-stream').innerHTML = '';
+            currentMessageContent = null;
+            lastStatus = null;
+
+            document.getElementById('placeholder').classList.remove('hidden');
+            document.getElementById('preview-frame').classList.add('hidden');
+            document.getElementById('action-buttons').classList.add('hidden');
+            document.getElementById('action-buttons').classList.remove('flex');
+
+            addCard('user', topic);
+
+            let infoText = `🎯 ${useProMode ? 'Pro 模式' : '标准模式'}`;
+            if (styleName && !styleName.includes('默认')) infoText += ` | 🎨 ${styleName}`;
+            if (selectedColor) infoText += ` | 🌈 ${selectedColor}`;
+
+            addCard('agent', infoText);
+
+            try {
+                const response = await fetch('/generate_stream', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        topic,
+                        use_pro: useProMode,
+                        style_prompt: stylePrompt,
+                        color_hex: selectedColor
+                    })
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.substring(6));
+                                handleEvent(data);
+                            } catch (e) { console.log("Ignore JSON error"); }
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+                addCard('agent', '❌ 网络连接错误');
+            } finally {
+                loadingBar.classList.add('hidden');
+                loadingBar.classList.remove('flex');
+                inputArea.classList.remove('hidden');
+                setTimeout(() => document.getElementById('topic-input').focus(), 100);
+            }
+        }
+
+        function handleEvent(data) {
+            const stream = document.getElementById('process-stream');
+
+            if (data.type === 'step') {
+                if (data.status === lastStatus && currentMessageContent && data.status === 'thinking') {
+                    currentMessageContent.innerText += data.message;
+                    stream.scrollTop = stream.scrollHeight;
+                }
+                else {
+                    const isGenerating = (data.status === 'generating' || data.status === 'bundling');
+                    const newCard = addCard('agent', data.message, isGenerating);
+
+                    if (data.status === 'thinking') {
+                        currentMessageContent = newCard.textSpan;
+                    } else {
+                        currentMessageContent = null;
+                    }
+                }
+                lastStatus = data.status;
+
+            } else if (data.type === 'slide_done') {
+                currentMessageContent = null;
+                lastStatus = null;
+
+                const imgCard = document.createElement('div');
+                imgCard.className = 'p-3 rounded-xl bg-card border mt-2 animate-fade-in shadow-sm';
+                imgCard.innerHTML = `
+                    <div class="text-xs text-gray-500 mb-2 flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                        第 ${data.data.page} 页
+                    </div>
+                    <img src="${data.data.image_path}" class="w-full rounded border border-gray-200">
+                `;
+                stream.appendChild(imgCard);
+                stream.scrollTop = stream.scrollHeight;
+
+            } else if (data.type === 'finish') {
+                currentMessageContent = null;
+                addCard('agent', '🎉 PPT 生成完成！');
+
+                const frame = document.getElementById('preview-frame');
+                frame.src = data.data.html_url;
+                frame.classList.remove('hidden');
+                document.getElementById('placeholder').classList.add('hidden');
+
+                document.getElementById('download-zip').href = data.data.zip_url;
+                document.getElementById('open-full').href = data.data.html_url;
+                document.getElementById('action-buttons').classList.remove('hidden');
+                document.getElementById('action-buttons').classList.add('flex');
+
+            } else if (data.type === 'error') {
+                currentMessageContent = null;
+                addCard('agent', '❌ ' + data.message);
+            }
+        }
+
+        function addCard(role, text, isLoading = false) {
+            const stream = document.getElementById('process-stream');
+            const div = document.createElement('div');
+
+            // 原始类名保留，依靠 CSS 强制覆盖颜色
+            const bgClass = role === 'user' ? 'bg-white text-black border-white self-end' : 'bg-card text-gray-200 border-gray-700 self-start';
+            div.className = `p-4 rounded-xl border ${bgClass} text-sm mb-4 shadow-sm animate-fade-in max-w-[90%]`;
+
+            const textSpan = document.createElement('span');
+            textSpan.innerText = text;
+            textSpan.className = "leading-relaxed";
+
+            div.appendChild(textSpan);
+
+            if (isLoading) {
+                const loader = document.createElement('div');
+                loader.className = "mt-3 flex gap-1.5 opacity-60";
+                loader.innerHTML = `<span class="w-1.5 h-1.5 bg-gray-600 rounded-full animate-bounce"></span><span class="w-1.5 h-1.5 bg-gray-600 rounded-full animate-bounce" style="animation-delay: 0.1s"></span><span class="w-1.5 h-1.5 bg-gray-600 rounded-full animate-bounce" style="animation-delay: 0.2s"></span>`;
+                div.appendChild(loader);
+            }
+
+            stream.appendChild(div);
+            stream.scrollTop = stream.scrollHeight;
+
+            return { div, textSpan };
+        }
+    </script>
+</body>
+
+</html>
