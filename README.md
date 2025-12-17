@@ -54,8 +54,8 @@ start_server.bat
 | 服务 | 说明 | 示例 |
 |------|------|------|
 | `llm` | 大语言模型（用于生成PPT内容） | 智谱 GLM、OpenAI 等 |
-| `modelscope` | 图像生成模型 | 通义万相 |
-| `image_tool_pro` | 高质量图像生成（Pro模式） | 火山引擎豆包 |
+| `modelscope` | 图像生成模型 | z-image |
+| `image_tool_pro` | 高质量图像生成（Pro模式） | seedream4.5 |
 | `mcp` | 联网搜索服务 | 智谱 MCP |
 
 ### 风格配置
